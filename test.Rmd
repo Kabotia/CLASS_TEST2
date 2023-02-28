@@ -1,0 +1,200 @@
+> #第一步：数据读取与观察
+> #https://www.kaggle.com/c/titanic
+> titanic<-read.csv(file.choose())
+> #查看数据
+> summary(titanic)#population
+  PassengerId       Survived          Pclass          Name               Sex           
+ Min.   :  1.0   Min.   :0.0000   Min.   :1.000   Length:891         Length:891        
+ 1st Qu.:223.5   1st Qu.:0.0000   1st Qu.:2.000   Class :character   Class :character  
+ Median :446.0   Median :0.0000   Median :3.000   Mode  :character   Mode  :character  
+ Mean   :446.0   Mean   :0.3838   Mean   :2.309                                        
+ 3rd Qu.:668.5   3rd Qu.:1.0000   3rd Qu.:3.000                                        
+ Max.   :891.0   Max.   :1.0000   Max.   :3.000                                        
+                                                                                       
+      Age            SibSp           Parch           Ticket               Fare       
+ Min.   : 0.42   Min.   :0.000   Min.   :0.0000   Length:891         Min.   :  0.00  
+ 1st Qu.:20.12   1st Qu.:0.000   1st Qu.:0.0000   Class :character   1st Qu.:  7.91  
+ Median :28.00   Median :0.000   Median :0.0000   Mode  :character   Median : 14.45  
+ Mean   :29.70   Mean   :0.523   Mean   :0.3816                      Mean   : 32.20  
+ 3rd Qu.:38.00   3rd Qu.:1.000   3rd Qu.:0.0000                      3rd Qu.: 31.00  
+ Max.   :80.00   Max.   :8.000   Max.   :6.0000                      Max.   :512.33  
+ NA's   :177                                                                         
+    Cabin             Embarked        
+ Length:891         Length:891        
+ Class :character   Class :character  
+ Mode  :character   Mode  :character  
+                                      
+                                      
+                                      
+                                      
+> head(titanic)#top 6
+  PassengerId Survived Pclass                                                Name    Sex Age
+1           1        0      3                             Braund, Mr. Owen Harris   male  22
+2           2        1      1 Cumings, Mrs. John Bradley (Florence Briggs Thayer) female  38
+3           3        1      3                              Heikkinen, Miss. Laina female  26
+4           4        1      1        Futrelle, Mrs. Jacques Heath (Lily May Peel) female  35
+5           5        0      3                            Allen, Mr. William Henry   male  35
+6           6        0      3                                    Moran, Mr. James   male  NA
+  SibSp Parch           Ticket    Fare Cabin Embarked
+1     1     0        A/5 21171  7.2500              S
+2     1     0         PC 17599 71.2833   C85        C
+3     0     0 STON/O2. 3101282  7.9250              S
+4     1     0           113803 53.1000  C123        S
+5     0     0           373450  8.0500              S
+6     0     0           330877  8.4583              Q
+> 
+> #第二步：数据处理
+> #1、数据属性规范
+> titanic$Pclass <- factor(titanic$Pclass)#因子类型定义，分类变量
+> #2、缺失值处理
+> sum(is.na(titanic$Age))
+[1] 177
+> sum(is.na(titanic$Cabin))
+[1] 0
+> summary(titanic$Cabin)
+   Length     Class      Mode 
+      891 character character 
+> #可视化呈现
+> library(colorspace)
+> library(grid)
+> library(data.table)
+> library(VIM)
+VIM is ready to use.
+
+Suggestions and bug-reports can be submitted at: https://github.com/statistikat/VIM/issues
+
+载入程辑包：‘VIM’
+
+The following object is masked from ‘package:datasets’:
+
+    sleep
+
+> library(mice)
+> library(ggplot2)
+> NaPlot <- aggr(titanic,
++                col=c("cyan", "red"), 
++                numbers=TRUE, 
++                labels=names(data), 
++                cex.axis=.7, 
++                gap=3, 
++                ylab=c("Histogram  of missing data","Pattern")) #缺失值信息可视化
+> 
+> #Age缺失值处理
+> median(titanic$Age,na.rm = T)
+[1] 28
+> titanic$Age[is.na(titanic$Age)] <- median(titanic$Age,na.rm = T)
+> titanic$Embarked[is.na(titanic$Embarked)] <- 'S'
+> summary(titanic)
+  PassengerId       Survived      Pclass      Name               Sex           
+ Min.   :  1.0   Min.   :0.0000   1:216   Length:891         Length:891        
+ 1st Qu.:223.5   1st Qu.:0.0000   2:184   Class :character   Class :character  
+ Median :446.0   Median :0.0000   3:491   Mode  :character   Mode  :character  
+ Mean   :446.0   Mean   :0.3838                                                
+ 3rd Qu.:668.5   3rd Qu.:1.0000                                                
+ Max.   :891.0   Max.   :1.0000                                                
+      Age            SibSp           Parch           Ticket               Fare       
+ Min.   : 0.42   Min.   :0.000   Min.   :0.0000   Length:891         Min.   :  0.00  
+ 1st Qu.:22.00   1st Qu.:0.000   1st Qu.:0.0000   Class :character   1st Qu.:  7.91  
+ Median :28.00   Median :0.000   Median :0.0000   Mode  :character   Median : 14.45  
+ Mean   :29.36   Mean   :0.523   Mean   :0.3816                      Mean   : 32.20  
+ 3rd Qu.:35.00   3rd Qu.:1.000   3rd Qu.:0.0000                      3rd Qu.: 31.00  
+ Max.   :80.00   Max.   :8.000   Max.   :6.0000                      Max.   :512.33  
+    Cabin             Embarked        
+ Length:891         Length:891        
+ Class :character   Class :character  
+ Mode  :character   Mode  :character  
+                                      
+                                      
+                                      
+> 
+> #第3步：探索性分析
+> #拆分训练集和测试集
+> #随机划分：
+> library(lattice)
+> library(caret) #版本不够
+> base <- data.frame(predict(dummyVars(~., data = titanic), titanic))
+> trainid <- createDataPartition(base$PassengerId, p = 0.75, list = F)
+>  train <- base[trainid,]
+>  test <- base[-trainid,]#方法错误
+>  #直接读取，全样本作为测试集（准确率偏高一些）
+>  train<-read.csv(file.choose())
+>  test<-read.csv(file.choose())
+>  
+> #（1）乘客所坐的船舱是如何影响生还率
+> library(ggplot2) 
+> Pclass_S <- table(train$Survived, train$Pclass) 
+> Pclass_S_prop <- prop.table(Pclass_S, 2) 
+> ggplot(data = train, aes(x = Pclass, fill = factor(Survived)))+geom_bar(stat='count', position='dodge') + scale_x_continuous(breaks=c(1:3)) + labs(x = 'Pclass')
+> # 查看生还率
+> Pclass_S_prop
+http://127.0.0.1:34175/graphics/963fed9a-77ec-42f1-98ae-8a44241f3092.png
+   
+      1         2         3
+  0 0.3703704 0.5271739 0.7576375
+  1 0.6296296 0.4728261 0.2423625
+> 
+> #（2）性别：泰坦尼克号上，人们是否也会遵循女士优先的准则呢？
+> Sex_S <- table(train$Survived, train$Sex)
+> Sex_S_prop <- prop.table(Sex_S, 2)
+> ggplot(data = train, aes(x = Sex, fill = factor(Survived)))+geom_bar(stat='count', position='dodge')
+> http://127.0.0.1:34175/graphics/fd6c0e5e-a752-4d5d-bf76-cbdffca5ec26.png
+> #（3）年龄的影响？
+> Agedata <- as.numeric(unlist(train$Age))
+> Age_Level<-cut(Agedata, breaks = c(0, 15, 30, 45, 60, 75, 90), labels = c('kids', 'teenagers', 'prime', 'middle', 'agedness', 'senium' ))
+> Age_S <- table(train$Survived, Age_Level)
+> Age_S_prop <- prop.table(Age_S, 2)
+> ggplot(data = data.frame(train$Survived, Agedata), aes(x = cut(Agedata, breaks = c(0, 15, 30, 45, 60, 75, 90)), fill = factor(train.Survived)))+geom_bar(stat='count', position='dodge') + labs(x = 'Age') +  scale_x_discrete(labels = c('kids', 'teenagers', 'prime', 'middle', 'agedness', 'senium'))
+> http://127.0.0.1:34175/graphics/cf80feb8-5e38-46bd-8ded-eddb56457e72.png
+> #(4)Family
+> Sibsp_S <- table(train$Survived, train$SibSp)
+> Parch_S <- table(train$Survived, train$Parch)
+> Sibsp_S_prop <- prop.table(Sibsp_S, 2)
+> Parch_S_prop <- prop.table(Parch_S, 2)
+> ggplot(data = train, aes(x = SibSp, fill = factor(Survived)))+geom_bar(stat='count', position='dodge') + scale_x_continuous(breaks=c(0:8)) + labs(x = 'Sibsp')
+> ggplot(data = train, aes(x = Parch, fill = factor(Survived)))+geom_bar(stat='count', position='dodge') + scale_x_continuous(breaks=c(0:6)) + labs(x = 'Parch')
+> Families <- train$SibSp +train$Parch
+> ggplot(data = train, aes(x = Families, fill = factor(Survived)))+geom_bar(stat='count', position='dodge') + scale_x_continuous(breaks=c(0:10)) + labs(x = 'Families')
+http://127.0.0.1:34175/graphics/cd739b16-065e-4055-965a-149d8e775730.png
+http://127.0.0.1:34175/graphics/df30a557-ab16-4aac-9383-92d2ccad68db.png
+> http://127.0.0.1:34175/graphics/302e4045-c647-451b-ac9f-920ef08425d0.png
+> 
+> #(5) 现金和港口
+> #一个乘客上船时所带的现金，以及他所登船的港口会对他成为幸存者有影响么？这两个看似和成为幸存者毫无关系的因素，可能正从侧面表现出了幸存者所拥有的属性。那么还是首先从简单的单因素统计绘图开始。其中将Fare这一变量分为三个区间，第一个区间为(0, 50]标签为poor，第二个区间为(50, 100]标签为middle，第三个区间为(100, 600]标签为rich。
+> Faredata <- as.numeric(unlist(train$fare))
+> Fare_S <- table(train$Survived, cut(Faredata, breaks = c(0, 50, 100, 600), labels = c('poor', 'middle', 'rich')))
+Error in table(train$Survived, cut(Faredata, breaks = c(0, 50, 100, 600),  : 
+  所有参数的长度都应一致
+  
+> library(ggplot2)
+> require(ggplot2)
+> data()
+> data(diamonds)
+> head(diamonds)
+# A tibble: 6 × 10
+  carat cut       color clarity depth table price     x     y     z
+  <dbl> <ord>     <ord> <ord>   <dbl> <dbl> <int> <dbl> <dbl> <dbl>
+1  0.23 Ideal     E     SI2      61.5    55   326  3.95  3.98  2.43
+2  0.21 Premium   E     SI1      59.8    61   326  3.89  3.84  2.31
+3  0.23 Good      E     VS1      56.9    65   327  4.05  4.07  2.31
+4  0.29 Premium   I     VS2      62.4    58   334  4.2   4.23  2.63
+5  0.31 Good      J     SI2      63.3    58   335  4.34  4.35  2.75
+6  0.24 Very Good J     VVS2     62.8    57   336  3.94  3.96  2.48
+> #柱状图
+> hist(diamonds$carat,main="Carat Histogram",xlab="Carat")
+http://127.0.0.1:34175/graphics/aeb967f0-19dc-41ad-b312-b0d8ac62ecd8.png
+> #散点图
+> plot(price~carat,data=diamonds)
+> plot(log(price)~log(carat),data=diamonds)
+> ggplot(diamonds,aes(x=carat,y=price))+geom_point()
+http://127.0.0.1:34175/graphics/08451f2a-d338-4a00-b078-7134d0e4cbe0.png
+> #具有渲染效果的散点图
+> ggplot(diamonds,aes(x=carat,y=price))+geom_point(aes(color=color))
+> ggplot(diamonds,aes(x=carat,y=price))+geom_point(aes(color=color))+facet_grid(cut~clarity)
+http://127.0.0.1:34175/graphics/19b23cff-5acd-451b-91fe-2f67a3cb3adc.png
+http://127.0.0.1:34175/graphics/342b2e2f-6226-4f64-bc32-81af0a96f1f0.png
+> #从 ggthemes 提取华尔街日报的图表配色
+> library(ggthemes)
+> ggplot(diamonds,aes(x=carat,y=price))+geom_point(aes(color=color))+theme_wsj()
+> http://127.0.0.1:34175/graphics/483c3391-46be-44cb-b124-e7d382d1baa0.png
+> http://127.0.0.1:34175/graphics/a62fa2a5-8fed-4ac7-a237-ad943a32c7c7.png
+http://127.0.0.1:34175/graphics/4a7c6ed5-9f9a-4b86-9687-6f4e9d52ac0e.png
